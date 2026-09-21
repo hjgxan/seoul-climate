@@ -6,17 +6,12 @@ import plotly.graph_objects as go
 @st.cache_data
 def load_data(filepath: str = "seoul_temperature.csv") -> pd.DataFrame:
     df = pd.read_csv(filepath)
-    # 컬럼명 공백 및 BOM 문자 제거
     df.columns = df.columns.str.strip()
-    # 날짜 컬럼의 탭 문자 및 공백 제거
     df["날짜"] = df["날짜"].str.strip()
     df["날짜"] = pd.to_datetime(df["날짜"])
     df["연도"] = df["날짜"].dt.year
     df["월"] = df["날짜"].dt.month
-    
-    # 일교차 컬럼 생성
     df["일교차"] = df["최고기온(℃)"] - df["최저기온(℃)"]
-    
     return df
 
 df = load_data()
@@ -31,7 +26,7 @@ yearly_stats = df.groupby("연도").agg(
 
 yearly_stats["5년이동평균"] = yearly_stats["평균기온"].rolling(window=5, min_periods=1).mean()
 
-# 히트맵용 피벗 테이블 (행: 연도, 열: 월, 값: 평균기온)
+# 히트맵용 피벗 테이블
 heatmap_data = df.pivot_table(index="연도", columns="월", values="평균기온(℃)", aggfunc="mean")
 
 # --- 사이드바: 연도 범위 슬라이더 ---
@@ -79,22 +74,21 @@ fig_line.update_layout(
 )
 st.plotly_chart(fig_line, use_container_width=True)
 
-# --- 2. 월별 히트맵 ---
+# --- 2. 월별 히트맵 (이미지 색상 사용) ---
+# 이미지에서 추출한 색상 팔레트: #001c04 → #192780 → #760000 → #620000
 fig_heatmap = go.Figure(data=go.Heatmap(
     z=filtered_heatmap.values,
     x=filtered_heatmap.columns,
     y=filtered_heatmap.index,
     colorscale=[
-        [0.0, "darkblue"],   # 낮은 온도
-        [0.25, "blue"],
-        [0.5, "white"],
-        [0.75, "orange"],
-        [1.0, "darkred"]     # 높은 온도
+        [0.0, "#001c04"],
+        [0.25, "#192780"],
+        [0.5, "#4a4a4a"],
+        [0.75, "#760000"],
+        [1.0, "#620000"]
     ],
     colorbar=dict(title="평균기온 (℃)"),
-    hoverongaps=False,
-    zmin=filtered_heatmap.min().min(),
-    zmax=filtered_heatmap.max().max()
+    hoverongaps=False
 ))
 fig_heatmap.update_layout(
     title="월별 평균기온 히트맵",
